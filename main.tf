@@ -8,13 +8,13 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
 }
 
 #S3
 
 resource "aws_s3_bucket" "secure_bucket" {
-  bucket = "kenish-tf-secure-bucket"
+  bucket = var.bucket
 
   tags = {
     Name = "tf-s3"
@@ -58,8 +58,8 @@ resource "aws_s3_bucket_policy" "secure_bucket_policy" {
       "Principal": "*",
       "Action": "s3:*",
       "Resource": [
-        "arn:aws:s3:::kenish-tf-secure-bucket",
-        "arn:aws:s3:::kenish-tf-secure-bucket/*"
+        "arn:aws:s3:::${var.bucket}",
+        "arn:aws:s3:::${var.bucket}/*"
       ],
       "Condition": {
         "Bool": {
@@ -72,7 +72,7 @@ resource "aws_s3_bucket_policy" "secure_bucket_policy" {
       "Effect": "Deny",
       "Principal": "*",
       "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::kenish-tf-secure-bucket/*",
+      "Resource": "arn:aws:s3:::${var.bucket}/*",
       "Condition": {
         "Null": {
           "s3:x-amz-server-side-encryption": "true"
@@ -109,7 +109,7 @@ data "aws_ami" "amazon_linux" {
 
 # VPC
 resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
@@ -121,8 +121,8 @@ resource "aws_vpc" "main" {
 # PUBLIC SUBNET 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.0.0/24"
-  availability_zone       = "us-east-1a"
+  cidr_block              = var.vpc_public
+  availability_zone       = var.az_public_subnet
   map_public_ip_on_launch = true
 
   tags = {
@@ -199,7 +199,7 @@ resource "aws_security_group" "web" {
 # EC2 Instance
 resource "aws_instance" "web" {
   ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = "t3.micro"
+  instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   key_name               = "stack-key"
   vpc_security_group_ids = [aws_security_group.web.id]
